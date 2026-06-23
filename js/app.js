@@ -20,6 +20,7 @@ new Vue({
         previewContent: '',
         newCategory: '',
         categoryError: '',
+        currentTheme: 'auto',
         form: {
             id: null,
             name: '',
@@ -72,8 +73,36 @@ new Vue({
         } else {
             this.apps = JSON.parse(JSON.stringify(defaultApps));
         }
+        
+        // 主题初始化
+        const savedTheme = localStorage.getItem('storeTheme');
+        if (savedTheme) {
+            this.currentTheme = savedTheme;
+        }
+        this.applyTheme(this.currentTheme);
     },
     methods: {
+        // ====== 主题管理 ======
+        setTheme(theme) {
+            this.currentTheme = theme;
+            localStorage.setItem('storeTheme', theme);
+            this.applyTheme(theme);
+        },
+        applyTheme(theme) {
+            const body = document.body;
+            // 先移除所有主题类
+            body.classList.remove('theme-light', 'theme-dark');
+            
+            if (theme === 'auto') {
+                // 自动检测系统主题
+                const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                body.classList.add(darkMode ? 'theme-dark' : 'theme-light');
+            } else {
+                body.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark');
+            }
+        },
+        
+        // ====== 图片加载失败 ======
         handleImageError(event, app) {
             event.target.style.display = 'none';
             const parent = event.target.parentElement;
@@ -85,6 +114,7 @@ new Vue({
             parent.appendChild(placeholder);
         },
         
+        // ====== 导出数据 ======
         exportData() {
             const dataContent = `// 默认分类
 var defaultCategories = ${JSON.stringify(this.categories, null, 4)};
@@ -115,6 +145,7 @@ var defaultApps = ${JSON.stringify(this.apps, null, 4)};`;
             }
         },
         
+        // ====== 分类管理 ======
         addCategory() {
             const name = this.newCategory.trim();
             if (!name) {
@@ -147,6 +178,7 @@ var defaultApps = ${JSON.stringify(this.apps, null, 4)};`;
             localStorage.setItem('storeCategories', JSON.stringify(this.categories));
         },
         
+        // ====== 登录相关 ======
         handleLogin() {
             if (this.loginForm.username === 'admin' && 
                 this.loginForm.password === '201203102438gtGT') {

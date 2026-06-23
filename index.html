@@ -25,6 +25,7 @@
                 <input v-model="loginForm.password" type="password" placeholder="请输入密码" @keyup.enter="handleLogin">
                 <button class="btn-primary" @click="handleLogin" style="width:100%;padding:14px;margin-top:8px;">登 录</button>
                 <div style="text-align:center;color:#666;font-size:12px;margin-top:8px;">
+                    账号: admin / 密码: 201203102438gtGT
                 </div>
             </div>
         </div>
@@ -47,6 +48,21 @@
                 <button class="btn-logout" @click="logout">🚪 退出</button>
             </template>
         </div>
+    </div>
+
+    <!-- ====== 联系方式 ====== -->
+    <div class="contact-bar">
+        <span class="contact-item">📱 微信：<strong>mengtian1320</strong></span>
+        <span class="contact-item">💬 QQ：<strong>366195413</strong></span>
+        <span class="contact-item">📧 邮箱：<strong>mtmt1320@163.com</strong></span>
+    </div>
+
+    <!-- ====== 主题切换 ====== -->
+    <div class="theme-switcher">
+        <span class="theme-label">🌓 主题</span>
+        <button class="theme-btn" :class="{ active: currentTheme === 'light' }" @click="setTheme('light')">☀️ 白</button>
+        <button class="theme-btn" :class="{ active: currentTheme === 'dark' }" @click="setTheme('dark')">🌙 黑</button>
+        <button class="theme-btn" :class="{ active: currentTheme === 'auto' }" @click="setTheme('auto')">🔄 自动</button>
     </div>
 
     <div class="search-box">
