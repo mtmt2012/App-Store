@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 应用商店 - 后台管理</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="store-container" id="app">
+
+    <!-- ====== 登录弹窗 ====== -->
+    <div class="modal-overlay" v-if="showLoginModal" @click.self="showLoginModal = false">
+        <div class="modal login-modal">
+            <div class="logo-area" style="justify-content:center;margin-bottom:24px;">
+                <div class="logo-icon">🔐</div>
+                <span class="logo-text">后台登录</span>
+            </div>
+            <div class="modal-form">
+                <div v-if="loginError" class="login-error">❌ {{ loginError }}</div>
+                <label>用户名</label>
+                <input v-model="loginForm.username" placeholder="请输入用户名" @keyup.enter="handleLogin">
+                <label>密码</label>
+                <input v-model="loginForm.password" type="password" placeholder="请输入密码" @keyup.enter="handleLogin">
+                <button class="btn-primary" @click="handleLogin" style="width:100%;padding:14px;margin-top:8px;">登 录</button>
+                <div style="text-align:center;color:#666;font-size:12px;margin-top:8px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 主内容 ====== -->
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo-icon">🪟</div>
+            <span class="logo-text">应用商店</span>
+            <span class="admin-badge" v-if="isLoggedIn">后台管理</span>
+        </div>
+        <div class="header-actions">
+            <template v-if="!isLoggedIn">
+                <button class="btn-login" @click="showLoginModal = true">🔑 登录</button>
+            </template>
+            <template v-else>
+                <button class="btn-primary" @click="showAddModal = true">➕ 添加软件</button>
+                <button class="btn-export" @click="exportData">📄 导出数据</button>
+                <button class="btn-logout" @click="logout">🚪 退出</button>
+            </template>
+        </div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" placeholder="搜索应用、游戏或工具..." v-model="searchQuery" @input="filterApps">
+        <button @click="filterApps">🔍 搜索</button>
+    </div>
+
+    <div class="categories">
+        <span class="category-item" :class="{ active: currentCategory === '全部' }" @click="setCategory('全部')">✨ 全部</span>
+        <span class="category-item" v-for="(cat, index) in categories" :key="cat" 
+              :class="{ active: currentCategory === cat }" 
+              @click="setCategory(cat)">
+            {{ cat }}
+            <span v-if="isLoggedIn && categories.length > 1" class="category-actions">
+                <span v-if="index > 0" class="move-cat" @click.stop="moveCategory(index, 'left')">◀</span>
+                <span v-if="index < categories.length - 1" class="move-cat" @click.stop="moveCategory(index, 'right')">▶</span>
+            </span>
+        </span>
+        <span class="category-item add-category-btn" v-if="isLoggedIn" @click="showCategoryModal = true">➕ 添加分类</span>
+    </div>
+
+    <div class="toolbar">
+        <div class="result-count">共 <span>{{ filteredApps.length }}</span> 个应用</div>
+    </div>
+
+    <div class="app-grid">
+        <div v-for="app in filteredApps" :key="app.id" class="app-card">
+            <div class="app-icon">
+                <img :src="app.icon" :alt="app.name" @error="handleImageError($event, app)">
+            </div>
+            <div class="app-name">{{ app.name }}</div>
+            <div class="app-category">{{ app.category }}</div>
+            <div class="app-footer">
+                <a :href="app.downloadUrl" target="_blank" class="install-btn">⬇ 安装</a>
+            </div>
+            <div class="card-actions" v-if="isLoggedIn">
+                <button class="btn-warning" @click="editApp(app)">✏️</button>
+                <button class="btn-danger" @click="deleteApp(app.id)">🗑️</button>
+            </div>
+        </div>
+
+        <div v-if="filteredApps.length === 0" class="empty-state">
+            <div class="emoji">📦</div>
+            <p>暂无应用，点击「添加软件」开始添加</p>
+        </div>
+    </div>
+
+    <!-- ====== 添加/编辑软件弹窗 ====== -->
+    <div class="modal-overlay" v-if="(showAddModal || showEditModal) && isLoggedIn" @click.self="closeModal">
+        <div class="modal">
+            <h3>{{ showEditModal ? '✏️ 编辑软件' : '➕ 添加新软件' }}</h3>
+            <div class="modal-form">
+                <label>软件名称</label>
+                <input v-model="form.name" placeholder="例如：微信">
+
+                <label>分类</label>
+                <select v-model="form.category">
+                    <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+
+                <label>图标网络链接</label>
+                <input v-model="form.icon" placeholder="https://example.com/icon.png">
+                <div style="font-size:12px;color:#888;margin-top:-8px;">支持 .png .jpg .svg .ico 等格式</div>
+                
+                <div v-if="form.icon" style="display:flex;align-items:center;gap:12px;background:#1c1c1c;padding:10px;border-radius:10px;">
+                    <span style="font-size:12px;color:#888;">预览：</span>
+                    <img :src="form.icon" style="width:40px;height:40px;border-radius:8px;object-fit:contain;background:#fff;padding:4px;" @error="form.iconPreviewError = true">
+                    <span v-if="form.iconPreviewError" style="font-size:12px;color:#f44336;">⚠️ 链接无效</span>
+                </div>
+
+                <label>官网下载链接</label>
+                <input v-model="form.downloadUrl" placeholder="https://weixin.qq.com/">
+
+                <div class="modal-actions">
+                    <button class="btn-primary" @click="saveApp">✅ 保存</button>
+                    <button class="btn-danger" @click="closeModal">❌ 取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 添加分类弹窗 ====== -->
+    <div class="modal-overlay" v-if="showCategoryModal && isLoggedIn" @click.self="showCategoryModal = false">
+        <div class="modal login-modal">
+            <h3>➕ 添加分类</h3>
+            <div class="modal-form">
+                <div v-if="categoryError" class="login-error">❌ {{ categoryError }}</div>
+                <label>分类名称</label>
+                <input v-model="newCategory" placeholder="输入新分类名称" @keyup.enter="addCategory">
+                <div style="display:flex;gap:12px;margin-top:8px;">
+                    <button class="btn-primary" @click="addCategory" style="flex:1;">✅ 添加</button>
+                    <button class="btn-danger" @click="showCategoryModal = false; categoryError = ''; newCategory = ''" style="flex:1;">❌ 取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 数据预览弹窗 ====== -->
+    <div class="modal-overlay" v-if="showPreviewModal" @click.self="showPreviewModal = false">
+        <div class="modal preview-modal">
+            <h3>📄 数据预览</h3>
+            <div style="display:flex;gap:12px;margin-bottom:12px;">
+                <button class="btn-primary" @click="copyData" style="flex:1;">📋 复制全部</button>
+                <button class="btn-danger" @click="showPreviewModal = false" style="flex:1;">❌ 关闭</button>
+            </div>
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">
+                共 {{ apps.length }} 个应用，{{ categories.length }} 个分类
+            </div>
+            <textarea id="previewText" readonly style="width:100%;height:400px;background:#1c1c1c;color:#ccc;border:1px solid #333;border-radius:10px;padding:14px;font-size:13px;font-family:'Consolas','Courier New',monospace;resize:vertical;tab-size:2;">{{ previewContent }}</textarea>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
