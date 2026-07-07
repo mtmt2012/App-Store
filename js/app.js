@@ -181,7 +181,7 @@ var defaultApps = ${JSON.stringify(this.apps, null, 4)};`;
         // ====== 登录相关 ======
         handleLogin() {
             if (this.loginForm.username === 'admin' && 
-                this.loginForm.password === '201203102438gtGT') {
+                this.loginForm.password === 'admin123456') {
                 this.isLoggedIn = true;
                 this.loginError = '';
                 this.showLoginModal = false;
